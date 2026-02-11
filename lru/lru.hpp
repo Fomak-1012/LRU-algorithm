@@ -26,6 +26,14 @@ public:
 	 * elements
 	 * add whatever you want
 	*/
+	struct node {
+		T val;
+		node *pre, *nxt;
+		node() : pre(nullptr), nxt(nullptr) {}
+		node(const T& v, node *prev = nullptr, node *next = nullptr)
+			 : val(v), pre(prev), nxt(next) {}
+	};
+	node *head, *tail;
 
 // --------------------------
 	/**
@@ -33,10 +41,30 @@ public:
 	 * you can also add some if needed.
 	*/
 	double_list(){
+		head = new node();
+		tail = new node();
+		head->nxt = tail;
+		tail->pre = head;
 	}
 	double_list(const double_list<T> &other){
+		head = new node();
+		tail = new node();
+		head->nxt = tail;
+		tail->pre = head;
+
+		node *cur = other.head->nxt;
+		while(cur != other.tail) {
+			this->insert_tail(cur->val);
+			cur = cur.nxt;
+		}
 	}
 	~double_list(){
+		node* cur = head;
+		while(cur != nullptr) {
+			node* tmp = cur->nxt;
+			delete cur;
+			cur = tmp;
+		}
 	}
 
 	class iterator{
@@ -45,55 +73,136 @@ public:
 		 * elements
 		 * add whatever you want
 		*/
+		node *p;
 	    // --------------------------
         /**
 		 * the follows are constructors and destructors
 		 * you can also add some if needed.
 		*/
-		iterator(){}
-		iterator(const iterator &t){
-		}
+		iterator() : p(nullptr) {}
+		iterator(node *t) : p(t) {}
+		iterator(const iterator &t) : p(t.p) {}
+		
 		~iterator(){}
         /**
 		 * iter++
 		 */
 		iterator operator++(int) {
+			if(p->nxt == nullptr)
+				throw "It's the end!"
+			iterator tmp(*this);
+			p = p->nxt;
+			return tmp;
 		}
         /**
 		 * ++iter
 		 */
 		iterator &operator++() {
+			if(p->nxt == nullptr)
+				throw "It's the end!"
+			p = p->nxt;
+			return *this;
 		}
         /**
 		 * iter--
 		 */
 		iterator operator--(int) {
+			if(p->pre->pre == nullptr)
+				throw "It's the beginning!"
+			iterator tmp(*this);
+			p = p->pre;
+			return tmp;
 		}
         /**
 		 * --iter
 		 */
 		iterator &operator--() {
+			if(p->pre->pre == nullptr)
+				throw "It's the beginning!"
+			p = p->pre;
+			return *this;
 		}
 		/**
 		 * if the iter didn't point to a value
 		 * throw " invalid"
 		*/
 		T &operator*() const {
+			if(p == nullptr || p->pre == nullptr || p->nxt == nullptr)
+				throw "invalid";
+			return p->val;//注意返回值
 		}
         /**
          * other operation
         */
 		T *operator->() const noexcept {
+			return &(p->val);
 		}
 		bool operator==(const iterator &rhs) const {
+			return p == rhs.p;
     	}
 		bool operator!=(const iterator &rhs) const {
+			return p != rhs.p;
+		}
+	};
+
+	class const_iterator{
+	public:
+		node* p;
+		const_iterator() : p(nullptr) {}
+		const_iterator(node* t) : p(t) {}
+		const_iterator(const const_iterator &t) : p(t.p) {}
+		const_iterator(const iterator &t) : p(t.p) {}
+		~const_iterator(){}
+		const_iterator operator++(int) {
+			if(p->nxt == nullptr)
+				throw "It's the end!";
+			const_iterator tmp(*this);
+			p =  p->nxt;
+			return tmp;
+		}
+		const_iterator &operator++() {
+			if(p->nxt == nullptr)
+				throw "It's the end!";
+			p = p->nxt;
+			return *this;
+		}
+		const_iterator operator--(int) {
+			if(p->pre->pre == nullptr)
+				throw "It's the beginning!";
+			const_iterator tmp(*this);
+			p =  p->pre;
+			return tmp;
+		}
+		const_iterator &operator--() {
+			if(p->pre->pre == nullptr)
+				throw "It's the beginning!";
+			p = p->pre;
+			return *this;
+		}
+		const T &operator*() const {
+			if(p == nullptr || p->nxt == nullptr || p->pre == nullptr)
+				throw "invalid";
+			return p->val;
+		}
+		const T *operator->() const noexcept {
+			return &(p->val);
+		}
+		bool operator==(const const_iterator &rhs) const {
+			return p == rhs.p;
+		}
+		bool operator!=(const const_iterator &rhs) const {
+			return p != rhs.p;
 		}
 	};
 	/**
 	 * return an iterator to the beginning
 	 */
 	iterator begin(){
+		return iterator(head->nxt);
+	}
+
+	const_iterator cbegin() const {
+		return const_iterator(head->nxt);
 	}
 	/**
 	 * return an iterator to the ending
@@ -101,6 +210,11 @@ public:
 	 * just after the last element.
 	 */
 	iterator end(){
+		return iterator(tail);
+	}
+
+	const_iterator cend() const {
+		return const_iterator(tail);
 	}
 	/**
 	 * if the iter didn't point to anything, do nothing,
@@ -114,24 +228,51 @@ public:
 	 *  don't contain 2nd elememt.
 	*/
 	iterator erase(iterator pos){
+		if(pos.p == nullptr || pos.p == head || pos.p == tail)
+			return pos;
+		
+		node *to_delete = pos.p;
+		node *next_node = to_delete->nxt;
+		node *prev_node = to_delete->pre;
+		
+		prev_node->nxt = next_node;
+		next_node->pre = prev_node;
+		
+		delete to_delete; 
+		return iterator(next_node);
 	}
 
 	/**
 	 * the following are operations of double list
 	*/
 	void insert_head(const T &val){
+		node* tmp = new node(val, head, head->nxt);
+		head->nxt->pre = tmp;
+		head->nxt = tmp;
 	}
 	void insert_tail(const T &val){
+		node *tmp = new node(val, tail->pre, tail);
+		tail->pre->nxt = tmp;
+		tail->pre = tmp;
 	}
 	void delete_head(){
+		node* tmp = head->nxt;
+		head->nxt = head->nxt->nxt;
+		head->nxt->pre = head;
+		delete tmp;
 	}
 	void delete_tail(){
+		node* tmp = tail->pre;
+		tail->pre = tail->pre->pre;
+		tail->pre->nxt = tail;
+		delete tmp;
 	}
 	/**
 	 * if didn't contain anything, return true, 
 	 * otherwise false.
 	 */
 	bool empty(){
+		return head->nxt == tail;
 	}
 };
 
