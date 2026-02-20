@@ -471,6 +471,11 @@ template<
 	class Hash = std::hash<Key>, 
 	class Equal = std::equal_to<Key>
 > class linked_hashmap :public hashmap<Key,T,Hash,Equal>{
+private:
+	using value_type = pair<const Key, T>;
+    using list_iterator = typename double_list<value_type>::iterator;
+    using base_hashmap = hashmap<Key, list_iterator, Hash, Equal>;
+	double_list<value_type> global_list;
 public:
 	typedef pair<const Key, T> value_type;
 	/**
@@ -485,103 +490,174 @@ public:
          * elements
          * add whatever you want
         */
+	   list_iterator lit;
+	   linked_hashmap* map_ptr;
     // --------------------------
-		iterator(){
-		}
-		iterator(const iterator &other){
-		}
-		~iterator(){
-		}
+		iterator(list_iterator it = list_iterator(), linked_hashmap* ptr = nullptr)
+		 : lit(it), map_ptr(ptr) {}
+		iterator(const iterator &other)
+		 : lit(other.lit), map_ptr(other.map_ptr) {}
+		~iterator(){}
 
 		/**
 		 * iter++
 		 */
-		iterator operator++(int) {}
+		iterator operator++(int) {
+            iterator tmp = *this; 
+			++(*this); 
+			return tmp;
+        }
 		/**
 		 * ++iter
 		 */
-		iterator &operator++() {}
+		iterator &operator++() {
+            if(map_ptr == nullptr || lit == map_ptr->global_list.end()) 
+                throw "invalid";
+            ++lit; 
+			return *this;
+        }
 		/**
 		 * iter--
 		 */
-		iterator operator--(int) {}
+		iterator operator--(int) {
+            iterator tmp = *this; 
+			--(*this); 
+			return tmp;
+        }
 		/**
 		 * --iter
 		 */
-		iterator &operator--() {}
+		iterator &operator--() {
+            if(map_ptr == nullptr || lit == map_ptr->global_list.begin()) 
+                throw "invalid";
+            --lit; 
+			return *this;
+        }
 
 		/**
 		 * if the iter didn't point to a value
 		 * throw "star invalid"
 		*/
 		value_type &operator*() const {
+            if(map_ptr == nullptr || lit == map_ptr->global_list.end()) 
+                throw "star invalid";
+            return *lit;
 		}
 		value_type *operator->() const noexcept {
+            return &(*lit);
 		}
 
 		/**
 		 * operator to check whether two iterators are same (pointing to the same memory).
 		 */
-		bool operator==(const iterator &rhs) const {}
-		bool operator!=(const iterator &rhs) const {}
-		bool operator==(const const_iterator &rhs) const {}
-		bool operator!=(const const_iterator &rhs) const {}
+		bool operator==(const iterator &rhs) const {
+            return lit == rhs.lit;
+        }
+		bool operator!=(const iterator &rhs) const {
+            return lit != rhs.lit;
+        }
+		bool operator==(const const_iterator &rhs) const {
+            return lit == rhs.lit;
+        }
+		bool operator!=(const const_iterator &rhs) const {
+            return lit != rhs.lit;
+        }
 	};
  
 	class const_iterator {
-		public:
-        	/**
-             * elements
-             * add whatever you want
-            */
+	public:
+        /**
+         * elements
+         * add whatever you want
+        */
+        list_iterator lit;
+		const linked_hashmap* map_ptr;
     // --------------------------   
-		const_iterator() {
-		}
-		const_iterator(const iterator &other) {
-		}
+		const_iterator(list_iterator it = list_iterator(), const linked_hashmap* ptr = nullptr)
+         : lit(it), map_ptr(ptr) {}
+		const_iterator(const iterator &other)
+		 : lit(other.lit), map_ptr(other.map_ptr) {}
 
 		/**
 		 * iter++
 		 */
-		const_iterator operator++(int) {}
+		const_iterator operator++(int) {
+            const_iterator tmp = *this;
+            ++(*this);
+            return tmp;
+        }
 		/**
 		 * ++iter
 		 */
-		const_iterator &operator++() {}
+		const_iterator &operator++() {
+            if(map_ptr == nullptr || lit == map_ptr->global_list.end()) throw "invalid";
+            ++lit;
+            return *this;
+        }
 		/**
 		 * iter--
 		 */
-		const_iterator operator--(int) {}
+		const_iterator operator--(int) {
+            const_iterator tmp = *this;
+            --(*this);
+            return tmp;
+        }
 		/**
 		 * --iter
 		 */
-		const_iterator &operator--() {}
+		const_iterator &operator--() {
+            if(map_ptr == nullptr || lit == map_ptr->global_list.begin()) 
+                throw "invalid";
+            --lit;
+            return *this;
+        }
 
 		/**
 		 * if the iter didn't point to a value
 		 * throw 
 		*/
 		const value_type &operator*() const {
+            if(map_ptr == nullptr || lit == map_ptr->global_list.end()) 
+                throw "star invalid";
+            return *lit;
 		}
 		const value_type *operator->() const noexcept {
+            return &(*lit);
 		}
 
 		/**
 		 * operator to check whether two iterators are same (pointing to the same memory).
 		 */
-		bool operator==(const iterator &rhs) const {}
-		bool operator!=(const iterator &rhs) const {}
-		bool operator==(const const_iterator &rhs) const {}
-		bool operator!=(const const_iterator &rhs) const {}
+		bool operator==(const iterator &rhs) const {
+            return lit == rhs.lit;
+        }
+		bool operator!=(const iterator &rhs) const {
+            return lit != rhs.lit;
+        }
+		bool operator==(const const_iterator &rhs) const {
+            return lit == rhs.lit;
+        }
+		bool operator!=(const const_iterator &rhs) const {
+            return lit != rhs.lit;
+        }
 	};
  
-	linked_hashmap() {
-	}
-	linked_hashmap(const linked_hashmap &other){
+	linked_hashmap() {}
+	linked_hashmap(const linked_hashmap &other) {
+        for(auto it = other.global_list.begin(); it != other.global_list.end(); it++) {
+            this->insert(*it);
+        }
 	}
 	~linked_hashmap() {
+        clear();
 	}
 	linked_hashmap & operator=(const linked_hashmap &other) {
+        if(this == &other) return *this;
+        clear();
+        for(auto it = other.global_list.begin(); it != other.global_list.end(); it++) {
+            this->insert(*it);
+        }
+        return *this;
 	}
 
  	/**
@@ -589,12 +665,37 @@ public:
 	 * if the key not found, throw 
 	*/
 	T & at(const Key &key) {
+        auto hash_it = base_hashmap::find(key);
+        if(hash_it == base_hashmap::end()) 
+            throw "out of bound";
+
+        list_iterator lit = (*hash_it).second;
+        value_type val = *lit;
+
+        //保证链表头是刚用过的
+        global_list.erase(lit);
+        global_list.insert_head(val);
+
+        (*hash_it).second = global_list.begin();
+
+        return global_list.begin()->second;
 	}
 	const T & at(const Key &key) const {
+        auto hash_it = base_hashmap::find(key);
+        if(hash_it == base_hashmap::end()) 
+            throw "out of bound";
+        return (*hash_it).second->second;
 	}
 	T & operator[](const Key &key) {
+        auto hash_it = base_hashmap::find(key);
+        if(hash_it != base_hashmap::end()) {
+            return at(key); 
+        }
+        // if not found, throw exception
+        throw "out of bound";
 	}
 	const T & operator[](const Key &key) const {
+        return at(key);
 	}
 
 	/**
@@ -602,27 +703,39 @@ public:
 	 * inserted and existed element
 	 */
 	iterator begin() {
+        return iterator(global_list.begin(), this);
 	}
 	const_iterator cbegin() const {
+        return const_iterator(global_list.begin(), this);
 	}
     /**
 	 * return an iterator after the last inserted element
 	 */
 	iterator end() {
+        return iterator(global_list.end(), this);
 	}
 	const_iterator cend() const {
+        return const_iterator(global_list.end(), this);
 	}
   	/**
 	 * if didn't contain anything, return true, 
 	 * otherwise false.
 	 */
 	bool empty() const {
+        return global_list.empty();
 	}
 
     void clear(){
+        global_list.head->nxt = global_list.tail;
+        global_list.tail->pre = global_list.head;
+        base_hashmap::clear();
+        while(!global_list.empty()) {
+            global_list.delete_head();
+        }
 	}
 
 	size_t size() const {
+        return base_hashmap::size;
 	}
  	/**
 	 * insert the value_piar
@@ -635,6 +748,31 @@ public:
 	 * add a new element and return true
 	*/
 	pair<iterator, bool> insert(const value_type &value) {
+        auto hash_it = base_hashmap::find(value.first);
+        //查到了就更新
+		if(hash_it != base_hashmap::end()) {
+			list_iterator target_list_it = (*hash_it).second;
+
+			target_list_it->second = value.second;
+			value_type new_val = *target_list_it;
+            //依旧保证链表头是最近使用过的
+			global_list.erase(target_list_it);
+			global_list.insert_head(new_val);
+
+			(*hash_it).second = global_list.begin();
+
+			return pair<iterator, bool>(iterator(global_list.begin(), this), false);
+		}
+        //没查到就插入
+		else {
+            //依旧保证链表头是最近使用过的
+			global_list.insert_head(value);
+            list_iterator new_lit = global_list.begin();
+
+            base_hashmap::insert(sjtu::pair<const Key, list_iterator>(value.first, new_lit));
+
+            return pair<iterator, bool>(iterator(new_lit, this), true);
+		}
 	}
  	/**
 	 * erase the value_pair pointed by the iterator
@@ -642,12 +780,18 @@ public:
 	 * throw 
 	*/
 	void remove(iterator pos) {
+        if(pos == end() || pos.map_ptr != this) 
+            throw "invalid remove";
+        base_hashmap::remove(pos->first);
+        global_list.erase(pos.lit);
 	}
 	/**
 	 * return how many value_pairs consist of key
 	 * this should only return 0 or 1
 	*/
 	size_t count(const Key &key) const {
+        auto it = base_hashmap::find(key);
+        return (it == base_hashmap::end()) ? 0 : 1;
 	}
 	/**
 	 * find the iterator points at the value_pair
@@ -656,6 +800,9 @@ public:
 	 * point at nothing
 	*/
 	iterator find(const Key &key) {
+        auto hash_it = base_hashmap::find(key);
+        if(hash_it == base_hashmap::end()) return end();
+        return iterator((*hash_it).second, this);
 	}
 
 };
@@ -663,21 +810,35 @@ public:
 class lru{
     using lmap = sjtu::linked_hashmap<Integer,Matrix<int>,Hash,Equal>;
     using value_type = sjtu::pair<const Integer, Matrix<int> >;
+private:
+    lmap data;
+    size_t max_size;
 public:
-    lru(int size){
-    }
-    ~lru(){
-    }
+    lru(int size) : max_size(size) {}
+    ~lru() {}
     /**
      * save the value_pair in the memory
      * delete something in the memory if necessary
     */
-    void save(const value_type &v) const{
+    void save(const value_type &v) {
+        data.insert(v);
+
+		if(data.size() > (size_t)max_size) {
+			auto it = data.end();
+			--it;
+			data.remove(it);
+		}
+
     }
     /**
      * return a pointer contain the value
     */
-    Matrix<int>* get(const Integer &v) const{
+    Matrix<int>* get(const Integer &v) {
+        auto it = data.find(v);
+		if(it == data.end()){
+			return nullptr;
+		}
+		return &(data.at(v));
     }
     /**
      * just print everything in the memory
@@ -685,7 +846,10 @@ public:
      * this operation follows the order, but don't
      * change the order.
     */
-    void print(){
+    void print() {
+        for(auto it = data.begin(); it != data.end(); it++) {
+			std::cout << it->first.val << " " << it->second << std::endl;
+		}
     }
 };
 }
